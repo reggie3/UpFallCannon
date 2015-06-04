@@ -158,7 +158,7 @@ var ShapeProto = {
     moveLeft: false,
     moveRight: false,
     slowed: false,
-    maxXVel: 5,
+    maxXVel: 10,
 
     //control the dropping of new shapes
     bolReadyForNextShape: true,
@@ -202,7 +202,7 @@ var ShapeProto = {
         if(this.body.velocity.y < 0){
             ShapeProto.activeShapeQueue[this.shapeID] = false;
             this.body.position.x = this.destX;
-            this.movementQueue = [];
+            //this.movementQueue = [];
         }
 
         //if a box is traveling above a certain speed, and
@@ -223,7 +223,7 @@ var ShapeProto = {
             if(this.newBlock === true){
                 ShapeProto.bolReadyForNextShape = true; //ready for next shape to fall
                 this.newBlock= false;
-                this.movementQueue =[];
+                //this.movementQueue =[];
             }
         }
 
@@ -277,9 +277,9 @@ var ShapeProto = {
         //}
 
         //the following actions only concern the active shape
-        if(ShapeProto.currentActiveShapeID === this.shapeID){
+        if(ShapeProto.currentActiveShapeID === this.shapeID) {
 
-            if(this.restState!=="resting"){
+            if (this.restState !== "resting") {
                 if (!ShapeProto.bolUpButtonPressed) {
                     this.body.velocity.y = ShapeProto.normalFallingSpeed;
                 }
@@ -287,10 +287,11 @@ var ShapeProto = {
                     this.body.velocity.y = ShapeProto.normalFallingSpeed + ShapeProto.fastFallingSpeedDelta;
                 }
             }
+        }
             if(this.movementQueue.length>0) {
                 this.moveShapeSideways(dt);
             }
-        }
+
         //if(this.movementQueue[0].dir==="left"){
         //    this.moveShapeSideways(dt, "left");
         //}
@@ -305,7 +306,7 @@ var ShapeProto = {
     moveShapeSideways : function(dt) {
 
         var xVel = 50;
-        var slowDown = 3;
+        var slowDown = 8;
 
         if(this.movementQueue[0].state==="inactive"){
             //switch(this.movementQueue[0].dir){
@@ -527,7 +528,8 @@ var ShapeProto = {
         movementObject.dest = dest;
         movementObject.start = 0;
         movementObject.state = "inactive";
-        shape.movementQueue[shape.movementQueue.length] = movementObject;
+        //shape.movementQueue[shape.movementQueue.length] = movementObject
+        shape.movementQueue.push(movementObject);
     }
     ,
 

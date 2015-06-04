@@ -553,56 +553,81 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function mouseDown() {
-        var raycaster = new THREE.Raycaster(); // create once
+    function mouseDown(event) {
         var mouse = new THREE.Vector2(); // create once
-
 
         mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
         mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
+        canvasDown(mouse);
+    }
 
-        raycaster.setFromCamera( mouse, hudCamera );
+    function touchStart(event){
+        var touch = new THREE.Vector2(); // create once
+
+        touch.x = ( event.changedTouches[0].clientX / renderer.domElement.width ) * 2 - 1;
+        touch.y = - ( event.changedTouches[0].clientY / renderer.domElement.height ) * 2 + 1;
+        canvasDown(touch);
+    }
+
+    function canvasDown(vector2){
+
+        var raycaster = new THREE.Raycaster(); // create once
+
+        raycaster.setFromCamera( vector2, hudCamera );
 
         var intersectionArray = raycaster.intersectObjects( hudScene.children );
-            for (var i = 0; i < intersectionArray.length; i++) {
-                if (intersectionArray[i].object) {
-                    switch (intersectionArray[i].object.name) {
-                        case "leftUp":
-                        case "rightUp":
-                            console.log('down');
-                            tweenUpButtonDown();
-                            ShapeProto.bolUpButtonPressed = true;
-                            break;
+        for (var i = 0; i < intersectionArray.length; i++) {
+            if (intersectionArray[i].object) {
+                switch (intersectionArray[i].object.name) {
+                    case "leftUp":
+                    case "rightUp":
+                        console.log('down');
+                        tweenUpButtonDown();
+                        ShapeProto.bolUpButtonPressed = true;
+                        break;
 
-                    }
                 }
             }
+        }
     }
 
     function mouseUp() {
-        var raycaster = new THREE.Raycaster(); // create once
         var mouse = new THREE.Vector2(); // create once
-
 
         mouse.x = ( event.clientX / renderer.domElement.width ) * 2 - 1;
         mouse.y = - ( event.clientY / renderer.domElement.height ) * 2 + 1;
+        canvasUp(mouse);
 
-        raycaster.setFromCamera( mouse, hudCamera );
+    }
+
+    function touchEnd(){
+        var touch = new THREE.Vector2(); // create once
+        touch.x = ( event.changedTouches[0].clientX / renderer.domElement.width ) * 2 - 1;
+        touch.y = - ( event.changedTouches[0].clientY / renderer.domElement.height ) * 2 + 1;
+        canvasUp(touch)
+    }
+
+    /*****************
+     * called for touchend and mouseup events
+     */
+    function canvasUp(vector){
+        var raycaster = new THREE.Raycaster(); // create once
+        raycaster.setFromCamera( vector, hudCamera );
 
         var intersectionArray = raycaster.intersectObjects( hudScene.children );
-            for (var i = 0; i < intersectionArray.length; i++) {
-                if (intersectionArray[i].object) {
-                    switch (intersectionArray[i].object.name) {
-                        case "leftUp":
-                        case "rightUp":
-                            console.log('up');
-                            tweenUpButtonUp();
-                            ShapeProto.bolUpButtonPressed = false;
-                            break;
+        for (var i = 0; i < intersectionArray.length; i++) {
+            if (intersectionArray[i].object) {
+                switch (intersectionArray[i].object.name) {
+                    case "leftUp":
+                    case "rightUp":
+                        console.log('up');
+                        tweenUpButtonUp();
+                        ShapeProto.bolUpButtonPressed = false;
+                        break;
 
-                    }
                 }
             }
+        }
     }
 
 
@@ -611,7 +636,10 @@ document.addEventListener('DOMContentLoaded', function () {
         canvas.addEventListener('click', mouseClick, false);
         canvas.addEventListener('mousedown', mouseDown, false);
         canvas.addEventListener('mouseup', mouseUp, false);
+        canvas.addEventListener('mouseup', mouseUp, false);
         window.addEventListener('resize', onWindowResize, false);
+        canvas.addEventListener('touchstart', touchStart, false);
+        canvas.addEventListener('touchend', touchEnd, false);
     }
 
 
