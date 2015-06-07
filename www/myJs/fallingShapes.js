@@ -1,22 +1,19 @@
 
-var startingY;
+var startingY = -14;
 var boxMass = 1000;
 var boxRestitution = .2;
-var useNumberTexture = true;   //display shape ID's on the blocks
+var useNumberTexture = false;   //display shape ID's on the blocks
 var numBlocksToMatch = 3;
 
 
 //create a random box in a random location
-function Shape(scene, world, boxWidth, boxHeight, boxDepth, height, numBoxesWide, wallData) {
+function Shape(scene, world, boxWidth, boxHeight, boxDepth, gameState, numBoxesWide, wallData) {
 
     //numBoxesWide = 3;
     this.scene = scene;
     this.boxHeight = boxHeight;
     this.numBoxesWide = numBoxesWide;
     ShapeProto.wallData = wallData;
-
-    //this.numBoxesWide = 5;
-    startingY = -10;
 
     this.shapeID = this.currentID;
     ShapeProto.currentID++;
@@ -28,11 +25,6 @@ function Shape(scene, world, boxWidth, boxHeight, boxDepth, height, numBoxesWide
 
     var mat;
     if(useNumberTexture){
-        // create a canvas element
-        var canvas = document.createElement('canvas');
-        var context = canvas.getContext('2d');
-        context.fillStyle="#FF0000";
-
         var tex = new THREE.Texture(this.canvasTexture(this.shapeID, this.colors[colorIndex]));
         tex.minFilter = THREE.LinearFilter;
         tex.needsUpdate = true;
@@ -45,8 +37,7 @@ function Shape(scene, world, boxWidth, boxHeight, boxDepth, height, numBoxesWide
         });
     }
     this.mesh = new THREE.Mesh(new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth), mat);
-    this.columnNumber = Math.floor(Math.random() * this.numBoxesWide);
-
+    this.columnNumber = Math.floor(Math.random() * (this.numBoxesWide));
 
     // Create a slippery material (friction coefficient = 0.0)
     var slipperyMaterial = new CANNON.Material("slipperyMaterial");
@@ -61,11 +52,13 @@ function Shape(scene, world, boxWidth, boxHeight, boxDepth, height, numBoxesWide
 
     this.body = CannonHelper.createBox({mesh:this.mesh, mass:boxMass, material:slippery_ground_cm});
     this.body.shapeID = this.shapeID;
-    this.body.position.x = boxWidth * (this.columnNumber - numBoxesWide / 2);
+    this.body.position.x = (wallData.walls.ceiling.body.position.x  -
+        wallData.ceilingWidth/2) + (this.boxHeight / 2) + this.columnNumber;
     this.body.position.y = startingY;
     this.body.angularDamping = 1;
     //this.body.type = CANNON.Body.KINEMATIC;
     this.body.velocity.y = ShapeProto.normalFallingSpeed;
+    //console.log(this.shapeID + " column number: " + this.columnNumber);
 
     //var that= this;
     //this.body.addEventListener("collide", function (event) {
@@ -87,7 +80,7 @@ function Shape(scene, world, boxWidth, boxHeight, boxDepth, height, numBoxesWide
     this.mesh.position.copy(this.body.position);
     this.startX = this.body.position.x;
     this.destX = this.startX;
-    console.log(this.shapeID + " - " + this.shapeColor + " startX = " + this.startX);
+    //console.log(this.shapeID + " - " + this.shapeColor + " startX = " + this.startX);
     this.originalZPos = this.body.position.z;
     this.mesh.quaternion.copy(this.body.quaternion);
 
@@ -98,7 +91,7 @@ function Shape(scene, world, boxWidth, boxHeight, boxDepth, height, numBoxesWide
     scene.add(this.mesh);
     world.add(this.body);
 
-    this.columnNumber = Math.floor(Math.random() * numBoxesWide);
+    this.columnNumber = Math.floor(Math.random() * (numBoxesWide-1));
 
     this.activeShapeQueue[this.shapeID] = true;
     this.startPos = new CANNON.Vec3();
@@ -118,6 +111,7 @@ var ShapeProto = {
     boxColors: [0xff0000, 0xffff00, 0x00ff00, 0x0000ff],
     colors: ["red", "yellow", "green", "blue"],
     wallData: undefined,
+    gameState: "playing",
 
     originalXPos: undefined,
     originalZPos: undefined,
@@ -168,13 +162,12 @@ var ShapeProto = {
     normalFallingSpeed: 6,
     fastFallingSpeedDelta: 20,
 
-    //sideways movment
+    //sideways movement
     bolMovingSideways : false,
 
     update: function (dt) {
-        var movingThreshold = 1;
+        var movingThreshold = .5; //velocity an object must be going before it can be redeclared as moving
         var restThreshold = .75;  //time an object must be below the movingThreshold to determine if an item is resting
-
 
         this.body.inertia.set(0,0,0);
         this.body.invInertia.set(0,0,0);
@@ -202,7 +195,6 @@ var ShapeProto = {
         if(this.body.velocity.y < 0){
             ShapeProto.activeShapeQueue[this.shapeID] = false;
             this.body.position.x = this.destX;
-            //this.movementQueue = [];
         }
 
         //if a box is traveling above a certain speed, and
@@ -216,7 +208,8 @@ var ShapeProto = {
             //console.log("moving " + this.shapeID + " - " + this.shapeColor + " : vel= " + this.body.velocity.length());
         }
 
-        if((this.body.position.y>-3)&&
+        if((this.body.position.y > ShapeProto.wallData.walls.leftWall.mesh.position.y -
+            ShapeProto.wallData.walls.leftWall.mesh.geometry.parameters.height/2)&&
             ((Math.abs(this.body.velocity.y)<=movingThreshold))) {
             this.restCounter += dt;
             //console.log(this.shapeID + " resting: " +  this.restCounter);
@@ -224,6 +217,13 @@ var ShapeProto = {
                 ShapeProto.bolReadyForNextShape = true; //ready for next shape to fall
                 this.newBlock= false;
                 //this.movementQueue =[];
+                console.log(this.shapeID + " impact");
+                if(this.body.position.y <  ShapeProto.wallData.walls.leftWall.mesh.position.y -
+                    ShapeProto.wallData.walls.leftWall.mesh.geometry.parameters.height
+                    * .25){
+                        console.log("*** GAME OVER ***");
+                        ShapeProto.gameState = "game over";
+                    }
             }
         }
 
@@ -301,6 +301,13 @@ var ShapeProto = {
         //cap the speed in the y direction
         //this.body.velocity.y = Math.min(ShapeProto.maxYVel, this.body.velocity.y);
         //ShapeProto.updateActiveShape();
+
+        if (ShapeProto.gameState === "game over"){
+            return "game over";
+        }
+        else{
+            return "playing";
+        }
     },
 
     moveShapeSideways : function(dt) {
@@ -556,13 +563,13 @@ var ShapeProto = {
                 var myRays = {};
 
                 myRays.left = new THREE.Raycaster(originPoint, new THREE.Vector3(-this.boxHeight / 2, 0, 0),
-                    this.boxHeight / 2, this.boxHeight / 2 + this.boxHeight);
+                    this.boxHeight / 3, this.boxHeight / 2 + this.boxHeight);
                 myRays.right = new THREE.Raycaster(originPoint, new THREE.Vector3(this.boxHeight / 2, 0, 0),
-                    this.boxHeight / 2, this.boxHeight / 2 + this.boxHeight);
+                    this.boxHeight / 3, this.boxHeight / 2 + this.boxHeight);
                 myRays.top = new THREE.Raycaster(originPoint, new THREE.Vector3(0, this.boxHeight / 2, 0),
-                    this.boxHeight / 2, this.boxHeight / 2 + this.boxHeight);
+                    this.boxHeight / 3, this.boxHeight / 2 + this.boxHeight);
                 myRays.bottom = new THREE.Raycaster(originPoint, new THREE.Vector3(0, -this.boxHeight / 2, 0),
-                    this.boxHeight / 2, this.boxHeight / 2 + this.boxHeight);
+                    this.boxHeight / 3, this.boxHeight / 2 + this.boxHeight);
 
 
                 for (var rayKey in myRays) {
@@ -623,13 +630,8 @@ var ShapeProto = {
         context.fillText(id, canvas.width / 2, canvas.height / 2);
 
         return canvas;
-    },
-    moveShapeLeft: function(){
-
-    },
-    moveShapeRight: function(){
-
     }
+
 
 };
 
